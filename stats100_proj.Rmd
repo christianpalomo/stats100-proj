@@ -49,6 +49,8 @@ JT_points = round(10.14 * (as.numeric(Deca_data$JT) - 7) ** 1.08)
 
 Dec_points_data <- data.frame(`100m_points`, LJ_points, SP_points, HJ_points, `400m_points`, `110H_points`, DT_points, PV_points, JT_points, `1500m_points`)
 
+Deca_data
+
 
 
 ```
