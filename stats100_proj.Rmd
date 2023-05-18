@@ -23,28 +23,31 @@ Deca_data = read_excel("2022_Decathlon_Men_senior.xlsx")
 view(Deca_data)
 
 ```
-
+```{r}
+round(25.4347 * (18 - as.numeric(Deca_data$`100m`)) ** 1.81)
+```
 ```{r}
 
-`100m_points` = integer(25.4347 * (18 - as.numeric(Deca_data$`100m`)) ** 1.81)
+`100m_points` = round(25.4347 * (18 - as.numeric(Deca_data$`100m`)) ** 1.81)
 
-LJ_points = integer(0.14354 * (as.numeric(Deca_data$LJ) - 220) ** 1.4)
+LJ_points = round(0.14354 * (as.numeric(Deca_data$LJ) - 220) ** 1.4)
 
-SP_points = integer(51.39 * (as.numeric(Deca_data$SP) - 1.5) ** 1.05)
+SP_points = round(51.39 * (as.numeric(Deca_data$SP) - 1.5) ** 1.05)
 
-HJ_points = integer(0.8465 * (as.numeric(Deca_data$HJ) - 75) ** 1.42)
+HJ_points = round(0.8465 * (as.numeric(Deca_data$HJ) - 75) ** 1.42)
 
-`400m_points` = integer(1.53775 * (82 - as.numeric(Deca_data$`400m`)) ** 1.81)
+`400m_points` = round(1.53775 * (82 - as.numeric(Deca_data$`400m`)) ** 1.81)
 
-`110H_points` = integer(5.74352 * (28.65 - as.numeric(Deca_data$`110H`)) ** 1.92)
+`110H_points` = round(5.74352 * (28.65 - as.numeric(Deca_data$`110H`)) ** 1.92)
 
-DT_points = integer(12.91 * (as.numeric(Deca_data$DT) - 4) ** 1.1)
+DT_points = round(12.91 * (as.numeric(Deca_data$DT) - 4) ** 1.1)
 
-PV_points = integer(0.2797 * (as.numeric(Deca_data$PV) - 100) ** 1.35)
+PV_points = round(0.2797 * (as.numeric(Deca_data$PV) - 100) ** 1.35)
 
-JT_points = integer(10.14 * (as.numeric(Deca_data$JT) - 7) ** 1.08)
+JT_points = round(10.14 * (as.numeric(Deca_data$JT) - 7) ** 1.08)
 
 `1500m_results` = 60 * as.numeric(Deca_data$`1500m_minutes`) + as.numeric(Deca_data$`1500m_seconds`)
-`1500m_points` = integer(0.03768 * (480 - `1500m_results`) ** 1.85)
+`1500m_points` = round(0.03768 * (480 - `1500m_results`) ** 1.85)
 
+Deca_data
 ```
