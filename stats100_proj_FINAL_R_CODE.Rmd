@@ -1,0 +1,414 @@
+---
+title: "STATS 100 project"
+author: "Jonathan Calixto, Baird Johnson, Christian Palomo"
+output: html_notebook
+---
+
+
+```{r}
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(latex2exp))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(glmnet))
+suppressPackageStartupMessages(library(predtools))
+suppressPackageStartupMessages(library(psych))
+suppressPackageStartupMessages(library(readxl))
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+
+Deca_data = read_excel("2022_Decathlon_Men_senior.xlsx")
+view(Deca_data)
+
+
+
+```
+
+```{r}
+
+
+`100m_points` = round(25.4347 * (18 - as.numeric(Deca_data$`100m`)) ** 1.81)
+
+LJ_points = round(0.14354 * (as.numeric(Deca_data$LJ) - 220) ** 1.4)
+
+SP_points = round(51.39 * (as.numeric(Deca_data$SP) - 1.5) ** 1.05)
+
+HJ_points = round(0.8465 * (as.numeric(Deca_data$HJ) - 75) ** 1.42)
+
+`400m_points` = round(1.53775 * (82 - as.numeric(Deca_data$`400m`)) ** 1.81)
+
+`110H_points` = round(5.74352 * (28.65 - as.numeric(Deca_data$`110H`)) ** 1.92)
+
+DT_points = round(12.91 * (as.numeric(Deca_data$DT) - 4) ** 1.1)
+DT_points[is.nan(DT_points)] <- 0
+
+PV_points = round(0.2797 * (as.numeric(Deca_data$PV) - 100) ** 1.35)
+PV_points[is.nan(PV_points)] <- 0
+
+JT_points = round(10.14 * (as.numeric(Deca_data$JT) - 7) ** 1.08)
+
+
+`1500m_results` = 60 * as.numeric(Deca_data$`1500m_minutes`) + as.numeric(Deca_data$`1500m_seconds`)
+`1500m_points` = round(0.03768 * (480 - `1500m_results`) ** 1.85)
+
+Deca_points_data <- data.frame(`100m_points`, LJ_points, SP_points, HJ_points, `400m_points`, `110H_points`, DT_points, PV_points, JT_points, `1500m_points`)
+
+Deca_points_data$total = Deca_data$Total_score
+Deca_points_data$name = Deca_data$Last
+
+dim(Deca_points_data)
+
+
+view(Deca_points_data)
+
+
+
+```
+
+```{r}
+
+Deca_points_data$technique_events = Deca_points_data$X110H_points + Deca_points_data$DT_points + Deca_points_data$PV_points + Deca_points_data$JT_points
+
+Deca_points_data$technique_percentage = Deca_points_data$technique_events / Deca_points_data$total
+
+X100m_percentage = (Deca_points_data$X100m_points / Deca_points_data$total) * 100
+LJ_percentage = (Deca_points_data$LJ_points / Deca_points_data$total) * 100
+SP_percentage = (Deca_points_data$SP_points / Deca_points_data$total) * 100
+HJ_percentage = (Deca_points_data$HJ_points / Deca_points_data$total) * 100
+X400m_percentage = (Deca_points_data$X400m_points / Deca_points_data$total) * 100
+X110H_percentage = (Deca_points_data$X110H_points / Deca_points_data$total) * 100
+DT_percentage = (Deca_points_data$DT_points / Deca_points_data$total) * 100
+PV_percentage = (Deca_points_data$PV_points / Deca_points_data$total) * 100
+JT_percentage = (Deca_points_data$JT_points / Deca_points_data$total) * 100
+X1500m_percentage = (Deca_points_data$X1500m_points / Deca_points_data$total) * 100
+
+
+Deca_percentages <- data.frame(X100m_percentage, LJ_percentage, SP_percentage, HJ_percentage, X400m_percentage, X110H_percentage, DT_percentage, PV_percentage, JT_percentage, X1500m_percentage)
+
+view(Deca_percentages)
+
+
+means = c()
+sds = c()
+
+for (col in Deca_percentages) {
+  
+  means = c(means, mean(col))
+  sds = c(sds, sd(col))
+}
+
+view(means)
+events = colnames((Deca_points_data)[1:10])
+events = c("100m", "Long Jump", "Shot Put", "High Jump", "400m", "110m Hurdles", "Discus", "Pole Vault", "Javelin", "1500m")
+mean_percentages = means
+sd_percentages = sds
+percentages <- data.frame(events, mean_percentages, sd_percentages)
+
+
+view(percentages)
+
+```
+
+```{r}
+events
+ggplot(percentages, aes(x = events, y = mean_percentages, group = 1)) + geom_point() + geom_errorbar(width = 0.1, aes(ymin = mean_percentages - sd_percentages, ymax = mean_percentages + sd_percentages)) + theme(axis.text.x = element_text(angle = 90)) + ggtitle("Average Point Contribution per Event") + theme(plot.title = element_text(hjust = 0.5)) + ylab('Mean Percentages') + xlab('Events') + scale_x_discrete(limits = unique(percentages$events))
+
+```
+
+``` {r}
+
+
+lm_model_1 <- lm(X400m_points ~ X100m_points, data = Deca_points_data)
+summary(lm_model_1)
+
+lm_model_2 <- lm(JT_points ~ PV_points, data = Deca_points_data)
+summary(lm_model_2)
+
+lm_model_3 <- lm(JT_points ~ X100m_points, data = Deca_points_data)
+summary(lm_model_3)
+
+lm_model_4 <- lm(X1500m_points ~ X400m_points, data = Deca_points_data)
+summary(lm_model_4)
+
+print(lm_model_1$coefficients)
+
+ggplot(data = Deca_points_data, aes(x = X100m_points, y = X400m_points)) + geom_point() + geom_abline(slope = lm_model_1$coef[2], intercept = lm_model_1$coef[1], color = 'red')
+
+ggplot(data = Deca_points_data, aes(x = PV_points, y = JT_points)) + geom_point() + geom_abline(slope = lm_model_2$coef[2], intercept = lm_model_2$coef[1], color = 'red')
+
+ggplot(data = Deca_points_data, aes(x = X100m_points, y = JT_points)) + geom_point() + geom_abline(slope = lm_model_3$coef[2], intercept = lm_model_3$coef[1], color = 'red')
+
+ggplot(data = Deca_points_data, aes(x = X400m_points, y = X1500m_points)) + geom_point() + geom_abline(slope = lm_model_4$coef[2], intercept = lm_model_4$coef[1], color = 'red')
+
+```
+
+
+``` {r}
+
+event_names = c("100m", "Long Jump", "Shot Put", "High Jump", "400m", "110m Hurdles", "Discus Throw", "Pole Valut", "Javelin Throw", "1500m")
+
+C = matrix(0,nrow = 10, ncol = 10)
+for(i in 1:10){
+  for(j in 1:10){
+    C[i,j] = signif(cor(Deca_points_data[i], Deca_points_data[j]), 2)
+  }
+}
+
+correlations = as.data.frame(C)
+colnames (correlations) = event_names
+rownames (correlations) = event_names
+
+P = matrix(0,nrow = 10, ncol = 10)
+for(i in 1:10){
+  for(j in 1:10){
+    P[i,j] = signif((cor(Deca_points_data[i], Deca_points_data[j]) ** 2), 2)
+  }
+}
+
+correlations_squared = as.data.frame(P)
+colnames (correlations_squared) = event_names
+rownames (correlations_squared) = event_names
+
+```
+
+``` {r}
+
+# Perform linear regression for each event
+Total = matrix(0, nrow = 10, ncol = 1)
+for (i in 1:10) {
+  Total[i,1] = signif((cor(Deca_points_data[i], Deca_points_data$total) ** 2), 2)}
+
+Total_frame = as.data.frame(Total)
+rownames (Total_frame) = event_names
+  # Create a formula for the linear regression
+  
+
+  
+  # Fit the linear regression model
+  #lm_model <- lm(total ~ event, data = Deca_points_data)
+  
+  #print(length(event))
+ # print(length(total))
+  
+  # Print the regression results
+  #cat("Event:", event, "\n")
+ # print(summary(lm_model))
+ # cat("\n")
+#}
+```
+
+```{r}
+Best_Scores = filter(Deca_points_data, total >= 8000)
+
+Total_Best = matrix(0, nrow = 10, ncol = 1)
+for (i in 1:10) {
+  Total_Best[i,1] = signif((cor(Best_Scores[i], Best_Scores$total) ** 2), 2)}
+
+Total_Best_frame = as.data.frame(Total_Best)
+rownames (Total_Best_frame) = event_names
+```
+
+``` {r}
+Best_Percentiles = Best_Scores
+average_best_100 = mean(Best_Scores$X100m_points)
+average_best_LJ = mean(Best_Scores$LJ_points)
+average_best_SP = mean(Best_Scores$SP_points)
+average_best_HJ = mean(Best_Scores$HJ_points)
+average_best_400 = mean(Best_Scores$X400m_points)
+average_best_110h = mean(Best_Scores$X110H_points)
+average_best_DT = mean(Best_Scores$DT_points)
+average_best_PV = mean(Best_Scores$PV_points)
+average_best_JT = mean(Best_Scores$JT_points)
+average_best_1500 = mean(Best_Scores$X1500m_points)
+
+Best_Percentiles$"100m points added" = Best_Percentiles$X100m_points - average_best_100
+Best_Percentiles$"Long Jump points added" = Best_Percentiles$LJ_points - average_best_LJ
+Best_Percentiles$"Shot Put points added" = Best_Percentiles$SP_points - average_best_SP
+Best_Percentiles$"High Jump points added" = Best_Percentiles$HJ_points - average_best_HJ
+Best_Percentiles$"400m points added" = Best_Percentiles$X400m_points - average_best_400
+Best_Percentiles$"110m Hurdles points added" = Best_Percentiles$X110H_points - average_best_110h
+Best_Percentiles$"Discuss Throw points added" = Best_Percentiles$DT_points - average_best_DT
+Best_Percentiles$"Pole Vault points added" = Best_Percentiles$PV_points - average_best_PV
+Best_Percentiles$"Javelin Throw points added" = Best_Percentiles$JT_points - average_best_JT
+Best_Percentiles$"1500m points added" = Best_Percentiles$X1500m_points - average_best_1500
+
+#Best_Percentiles = matrix(0, nrow = 81, ncol = 11)
+
+#name = Best_Scores$name
+#Best_Percentiles <- data.frame(name)
+#for(i in 1:10){
+  
+#}
+```
+
+``` {r}
+lower_group = filter(Deca_points_data, total < 8000)
+
+average_100 = mean(lower_group$X100m_points)
+average_LJ = mean(lower_group$LJ_points)
+average_SP = mean(lower_group$SP_points)
+average_HJ = mean(lower_group$HJ_points)
+average_400 = mean(lower_group$X400m_points)
+average_110h = mean(lower_group$X110H_points)
+average_DT = mean(lower_group$DT_points)
+average_PV = mean(lower_group$PV_points)
+average_JT = mean(lower_group$JT_points)
+average_1500 = mean(lower_group$X1500m_points)
+
+Best_Percentiles$"100m points added to normal" = Best_Percentiles$X100m_points - average_100
+Best_Percentiles$"Long Jump points added to normal" = Best_Percentiles$LJ_points - average_LJ
+Best_Percentiles$"Shot Put points added to normal" = Best_Percentiles$SP_points - average_SP
+Best_Percentiles$"High Jump points added to normal" = Best_Percentiles$HJ_points - average_HJ
+Best_Percentiles$"400m points added to normal" = Best_Percentiles$X400m_points - average_400
+Best_Percentiles$"110m Hurdles points added to normal" = Best_Percentiles$X110H_points - average_110h
+Best_Percentiles$"Discuss Throw points added to normal" = Best_Percentiles$DT_points - average_DT
+Best_Percentiles$"Pole Vault points added to normal" = Best_Percentiles$PV_points - average_PV
+Best_Percentiles$"Javelin Throw points added to normal" = Best_Percentiles$JT_points - average_JT
+Best_Percentiles$"1500m points added to normal" = Best_Percentiles$X1500m_points - average_1500
+
+```
+
+```{r}
+# LABELS
+hist_title = "Olympic level vs non-Olympic level performances:"
+x_label = "Points Added"
+x_limit = c(-200,400)
+y_limit = c(0, 35)
+
+jpeg("a.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`100m points added to normal`, main=paste(hist_title, "100m"),  xlab=x_label, xlim=x_limit, ylim=y_limit) #poster
+dev.off()
+jpeg("b.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Long Jump points added to normal`, main=paste(hist_title, "Long Jump"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("c.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Shot Put points added to normal`, main=paste(hist_title, "Shot Put"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("d.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`High Jump points added to normal`, main=paste(hist_title, "High Jump"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("e.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`400m points added to normal`, main=paste(hist_title, "400m"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("f.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`110m Hurdles points added to normal`, main=paste(hist_title, "110m Hurdles"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("g.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Discuss Throw points added to normal`, main=paste(hist_title, "Discus"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("h.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Pole Vault points added to normal`, main=paste(hist_title, "Pole Vault"),  xlab=x_label, xlim=x_limit, ylim=y_limit) # poster
+dev.off()
+jpeg("i.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Javelin Throw points added to normal`, main=paste(hist_title, "Javelin"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+jpeg("j.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`1500m points added to normal`, main=paste(hist_title, "1500m"),  xlab=x_label, xlim=x_limit, ylim=y_limit)
+dev.off()
+```
+
+``` {r}
+mean_added = c(mean(Best_Percentiles$`100m points added to normal`), mean(Best_Percentiles$`Long Jump points added to normal`), mean(Best_Percentiles$`Shot Put points added to normal`), mean(Best_Percentiles$`High Jump points added to normal`), mean(Best_Percentiles$`110m Hurdles points added to normal`), mean(Best_Percentiles$`400m points added to normal`),  mean(Best_Percentiles$`Discuss Throw points added to normal`), mean(Best_Percentiles$`Pole Vault points added to normal`), mean(Best_Percentiles$`Javelin Throw points added to normal`), mean(Best_Percentiles$`1500m points added to normal`))
+
+median_added = c(mean(Best_Percentiles$`100m points added to normal`), median(Best_Percentiles$`Long Jump points added to normal`), median(Best_Percentiles$`Shot Put points added to normal`), median(Best_Percentiles$`High Jump points added to normal`), median(Best_Percentiles$`110m Hurdles points added to normal`), median(Best_Percentiles$`400m points added to normal`),  median(Best_Percentiles$`Discuss Throw points added to normal`), median(Best_Percentiles$`Pole Vault points added to normal`), median(Best_Percentiles$`Javelin Throw points added to normal`), median(Best_Percentiles$`1500m points added to normal`))
+
+sd_added = c(sd(Best_Percentiles$`100m points added to normal`), sd(Best_Percentiles$`Long Jump points added to normal`), sd(Best_Percentiles$`Shot Put points added to normal`), sd(Best_Percentiles$`High Jump points added to normal`), sd(Best_Percentiles$`110m Hurdles points added to normal`), sd(Best_Percentiles$`400m points added to normal`),  sd(Best_Percentiles$`Discuss Throw points added to normal`), sd(Best_Percentiles$`Pole Vault points added to normal`), sd(Best_Percentiles$`Javelin Throw points added to normal`), sd(Best_Percentiles$`1500m points added to normal`))
+Summary_of_Differences = data.frame(event_names, mean_added, median_added, sd_added)
+
+barplot(Summary_of_Differences$mean_added)
+barplot(Summary_of_Differences$median_added)
+barplot(Summary_of_Differences$sd_added)
+```
+
+``` {r}
+jpeg("rplot.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`100m points added`, xlab = '100m points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - 100m')
+dev.off()
+
+jpeg("2.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Long Jump points added`, xlab = 'Long Jump points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - Long Jump')
+dev.off()
+jpeg("3.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Shot Put points added`, xlab = 'Shot Put points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - Shot Put')
+dev.off()
+jpeg("4.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`High Jump points added`, xlab = 'High Jump points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - High Jump')
+dev.off()
+jpeg("5.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`400m points added`, xlab = '400m points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - 400m')
+dev.off()
+jpeg("6.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`110m Hurdles points added`, xlab = '110m Hurdles points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - 110m Hurdles')
+dev.off()
+jpeg("7.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Discuss Throw points added`, xlab = 'Discus Throw points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - Discus Throw')
+dev.off()
+jpeg("8.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Pole Vault points added`, xlab = 'Pole Vault points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - Pole Vault')
+dev.off()
+jpeg("9.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`Javelin Throw points added`, xlab = 'Javelin Throw points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - Javelin Throw')
+dev.off()
+jpeg("10.jpg", width = 600, height = 400)
+hist(Best_Percentiles$`1500m points added`, xlab = '1500m points added', ylab = 'Frequency', main = 'Histogram of Best Percentiles - 1500m')
+dev.off()
+```
+
+```{r}
+Top_6 = filter(Best_Percentiles, total >8600)
+Scantling = Top_6[1,]
+Scantling_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Scantling_mat[1, i] = Scantling[1, 24+i]
+}
+Mayer = Top_6[2,]
+Mayer_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Mayer_mat[1, i] = Mayer[1, 24+i]
+}
+Warner = Top_6[3,]
+Warner_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Warner_mat[1, i] = Warner[1, 24+i]
+}
+Garland = Top_6[4,]
+Garland_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Garland_mat[1, i] = Garland[1, 24+i]
+}
+Lepage = Top_6[5,]
+Lepage_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Lepage_mat[1, i] = Lepage[1, 24+i]
+}
+Ziemek = Top_6[6,]
+Ziemek_mat = matrix(0, nrow = 1, ncol = 10)
+for (i in 1:10){
+  Ziemek_mat[1, i] = Ziemek[1, 24+i]
+}
+barplot(Scantling_mat, main = 'Points Added per event for Scantling', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2, ylim=c(0, 300))
+barplot(Mayer_mat, main = 'Points Added per event for Mayer', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2, ylim=c(0, 300))
+barplot(Warner_mat, main = 'Points Added per event for Warner', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2)
+barplot(Garland_mat, main = 'Points Added per event for Garland', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2)
+barplot(Lepage_mat, main = 'Points Added per event for Lepage', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2)
+barplot(Ziemek_mat, main = 'Points Added per event for Ziemek', ylab = 'Points Added', names.arg = event_names, cex.names = 0.7, las = 2)
+```
+
+```{r}
+# Correlations Squared Shading
+# typeof(correlations_squared)
+# correlations_squared
+# colors <- colorRampPalette(c("white", "blue"))(100)
+# heatmap(correlations_squared, col = colors)
+df <- as.data.frame(correlations_squared)
+
+heatmap(as.matrix(df), 
+        col = colorRampPalette(c("white", "blue"))(100),
+        scale = "none",
+        main = "Title")
+write.csv(df, file = "correlations_squared.csv", row.names = TRUE)
+df2 = as.data.frame(Summary_of_Differences)
+write.csv(df2, file = "Summary_of_Differences.csv", row.names = TRUE)
+```
